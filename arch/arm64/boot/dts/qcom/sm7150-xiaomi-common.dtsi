@@ -37,6 +37,11 @@
 
 		voltage-min-design-microvolt = <3400000>;
 		voltage-max-design-microvolt = <4400000>;
+		charge-full-design-microamp-hours = <5020000>;
+		constant-charge-current-max-microamp = <2000000>;
+		constant-charge-voltage-max-microvolt = <4400000>;
+		precharge-current-microamp = <300000>;
+		charge-term-current-microamp = <300000>;
 	};
 
 	chosen {
@@ -384,7 +389,7 @@
 		vddpx_2:
 		vreg_l6c_3p0: ldo6 {
 			regulator-min-microvolt = <3000000>;
-			regulator-max-microvolt = <3100000>;
+			regulator-max-microvolt = <3300000>;
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 
@@ -526,6 +531,14 @@
 
 &pm6150_qgauge {
 	monitored-battery = <&battery>;
+	power-supplies = <&pm6150_typec>;
+	status = "okay";
+};
+
+&pm6150_charger {
+	monitored-battery = <&battery>;
+	power-supplies = <&pm6150_typec>;
+	qcom,usb-icl-ua = <900000>;
 	status = "okay";
 };
 
@@ -546,12 +559,19 @@
 	connector {
 		compatible = "usb-c-connector";
 
-		power-role = "source";
+		power-role = "dual";
 		data-role = "dual";
-		self-powered;
+		typec-power-opmode = "usb";
 
-		source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_DUAL_ROLE |
+		source-pdos = <PDO_FIXED(5000, 900, PDO_FIXED_DUAL_ROLE |
 			       PDO_FIXED_USB_COMM | PDO_FIXED_DATA_SWAP)>;
+
+		sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_DUAL_ROLE |
+			       PDO_FIXED_USB_COMM |
+			       PDO_FIXED_DATA_SWAP)>;
+		op-sink-microwatt = <5000000>;
+		try-power-swap;
+
 
 		ports {
 			#address-cells = <1>;
@@ -670,14 +690,18 @@
 };
 
 &sdhc_2 {
-	cd-gpios = <&tlmm 69 GPIO_ACTIVE_LOW>;
-
+	no-1-8-v;
+/*	cd-gpios = <&tlmm 69 GPIO_ACTIVE_LOW>; */
+	broken-cd;
+	cd-debounce-delay-ms = <200>;
 	vmmc-supply = <&vreg_l9c_3p1>;
 	vqmmc-supply = <&vreg_l6c_3p0>;
-
+	no-sdio;
+	no-mmc;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&sdc2_on>;
 	pinctrl-1 = <&sdc2_off>;
+	status = "okay";
 };
 
 &tlmm {
@@ -795,7 +819,7 @@
 		};
 	};
 
-	sdc2_off: sdc1-off-state {
+	sdc2_off: sdc2-off-state {
 		clk-pins {
 			pins = "sdc2_clk";
 			bias-disable;
